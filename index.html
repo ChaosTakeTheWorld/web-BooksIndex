@@ -2,10 +2,142 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>我的第一个网页</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>启点图书 · 图书首页</title>
+  <link href="style.css" rel="stylesheet">
 </head>
 <body>
-  <h1>你好，Web！</h1>
-  <p>我是大二学生，正在学习网页开发。</p>
+  <header class="site-header" id="site-header">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">📚</span>
+      <h1>启点图书</h1>
+    </div>
+    <nav class="site-nav" id="site-nav" aria-label="主导航">
+      <a class="active" href="#" aria-current="page">首页</a>
+      <a href="#">检索</a>
+      <a href="#">分类</a>
+      <a href="#">关于</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <main class="content" id="main-content">
+      <!-- 检索区 -->
+      <section class="search-panel" id="search-panel" aria-label="图书检索">
+        <form action="#" class="search-form" method="get" id="search-form">
+          <div class="field">
+            <label for="keyword">书名关键字</label>
+            <input id="keyword" name="keyword" placeholder="如：三体 / 刘慈欣 / 9787…" required type="text">
+          </div>
+          <div class="field">
+            <label for="category">图书分类</label>
+            <select id="category" name="category">
+              <option value="all">全部</option>
+              <option value="computer">计算机</option>
+              <option value="literature">文学</option>
+            </select>
+          </div>
+          <button class="search-btn" type="submit">检索</button>
+        </form>
+      </section>
+
+      <section class="book-list" id="book-list" aria-labelledby="new-books-title">
+        <h2 class="section-title" id="new-books-title">新书推荐</h2>
+        <div class="cards">
+          <article class="book-card">
+            <div class="cover" aria-hidden="true">封面图</div>
+            <div class="info">
+              <h3 class="book-title">山</h3>
+              <p class="book-author">刘慈欣</p>
+              <p class="book-price">¥19.00</p>
+            </div>
+          </article>
+
+          <article class="book-card">
+            <div class="cover" aria-hidden="true">封面图</div>
+            <div class="info">
+              <h3 class="book-title">生死疲劳</h3>
+              <p class="book-author">莫言</p>
+              <p class="book-price">¥29.00</p>
+            </div>
+          </article>
+
+          <article class="book-card">
+            <div class="cover" aria-hidden="true">封面图</div>
+            <div class="info">
+              <h3 class="book-title">银河帝国</h3>
+              <p class="book-author">艾萨克·阿西莫夫</p>
+              <p class="book-price">¥48.00</p>
+            </div>
+          </article>
+
+          <article class="book-card">
+            <div class="cover" aria-hidden="true">封面图</div>
+            <div class="info">
+              <h3 class="book-title">嫌疑人X的献身</h3>
+              <p class="book-author">东野圭吾</p>
+              <p class="book-price">¥35.00</p>
+            </div>
+          </article>
+
+          <article class="book-card">
+            <div class="cover" aria-hidden="true">封面图</div>
+            <div class="info">
+              <h3 class="book-title">龙与少年游</h3>
+              <p class="book-author">江南</p>
+              <p class="book-price">¥25.00</p>
+            </div>
+          </article>
+
+          <article class="book-card">
+            <div class="cover" aria-hidden="true">封面图</div>
+            <div class="info">
+              <h3 class="book-title">霍乱时期的爱情</h3>
+              <p class="book-author">加西亚·马尔克斯</p>
+              <p class="book-price">¥45.00</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <aside class="sidebar" id="sidebar">
+      <section class="panel" id="categories" aria-labelledby="categories-title">
+        <h3 id="categories-title">图书分类</h3>
+        <ul>
+          <li><a href="#">文学小说</a></li>
+          <li><a href="#">科幻悬疑</a></li>
+          <li><a href="#">历史传记</a></li>
+          <li><a href="#">经管励志</a></li>
+          <li><a href="#">少儿读物</a></li>
+          <li><a href="#">艺术设计</a></li>
+        </ul>
+      </section>
+
+      <section class="panel" id="weekly-hot" aria-labelledby="weekly-hot-title">
+        <h3 id="weekly-hot-title">本周热榜</h3>
+        <ol>
+          <li><a href="#">山</a></li>
+          <li><a href="#">生死疲劳</a></li>
+          <li><a href="#">银河帝国</a></li>
+          <li><a href="#">嫌疑人X的献身</a></li>
+          <li><a href="#">龙与少年游</a></li>
+        </ol>
+      </section>
+
+      <section class="panel" id="borrow-notice" aria-labelledby="borrow-notice-title">
+        <h3 id="borrow-notice-title">借阅须知</h3>
+        <ul>
+          <li>借期 30 天，可续借 1 次</li>
+          <li>逾期每天 0.2 元</li>
+          <li>凭校园卡到馆取书</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="site-footer" id="site-footer">
+    <p>© 2026 启点图书 · 联系:contact@qidian.example · 仅供课程作业演示</p>
+  </footer>
 </body>
 </html>
