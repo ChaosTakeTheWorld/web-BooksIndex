@@ -1,8 +1,8 @@
 [
-  { "title": "山", "author": "刘慈欣", "price": 19.00, "inStock": true, "isNew": true },
-  { "title": "生死疲劳", "author": "莫言", "price": 29.00, "inStock": true, "isNew": false },
-  { "title": "银河帝国", "author": "艾萨克·阿西莫夫", "price": 48.00, "inStock": true, "isNew": true },
-  { "title": "嫌疑人X的献身", "author": "东野圭吾", "price": 35.00, "inStock": false, "isNew": false },
-  { "title": "龙与少年游", "author": "江南", "price": 25.00, "inStock": true, "isNew": false },
-  { "title": "死在火星上", "author": "天瑞说符", "price": 45.00, "inStock": true, "isNew": false }
+  { "title": "山", "author": "刘慈欣", "category": "scifi", "price": 19.00, "inStock": true, "isNew": true },
+  { "title": "生死疲劳", "author": "莫言", "category": "literature", "price": 29.00, "inStock": true, "isNew": false },
+  { "title": "银河帝国", "author": "艾萨克·阿西莫夫", "category": "scifi", "price": 48.00, "inStock": true, "isNew": true },
+  { "title": "嫌疑人X的献身", "author": "东野圭吾", "category": "mystery", "price": 35.00, "inStock": false, "isNew": false },
+  { "title": "龙与少年游", "author": "江南", "category": "literature", "price": 25.00, "inStock": true, "isNew": false },
+  { "title": "死在火星上", "author": "天瑞说符", "category": "scifi", "price": 45.00, "inStock": true, "isNew": false }
 ]

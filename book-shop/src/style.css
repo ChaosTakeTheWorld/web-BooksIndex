@@ -1,0 +1,545 @@
+/* ============================================================
+   style.css —— 启点图书 首页外部样式表
+   主题：护眼暖白（Eye-friendly Warm White）
+     · 底色用暖调米白，避免纯 #FFF 的强反光
+     · 面板用纯白 + 极浅描边，正文用深灰而非纯黑，降低对比刺激
+     · 全局只保留一个低饱和的「豆绿」强调色，长时间阅读更舒服
+   布局：Flex 重构版（第 3 次课）
+     · 骨架：body 开 flex column，内容区 flex:1，页脚永远粘底
+     · 页头：两端对齐替代 float，菜单间距交给 gap
+     · 两栏：content 弹性伸缩 + sidebar 定宽不缩
+     · 网格：flex-wrap + gap + flex:1，卡片自动换行不塌陷
+     · 角标：父相子绝（.book-card relative + .badge-new absolute）
+   交互（第 4 次课）：
+     · 暗色模式：JS 只切 body.dark 一个类，颜色全靠下面的变量覆盖
+     · 回到顶部：fixed 钉在右下角，点击滚回顶部
+   数据驱动（第 5 次课）：
+     · 书卡由 books.json 渲染，新增 .empty / .stock-out 两个状态样式
+   高光令牌（第 5 次课补充）：
+     · 卡片/面板顶部内高光、封面白纱与斜光、角标投影、悬停位移
+       全部收进令牌；暗色只覆盖令牌，不再出现近纯白的硬高光
+   ============================================================ */
+
+/* ===================== 设计令牌 ===================== */
+:root {
+  /* 底色与面板：暖白 → 纯白，层次靠描边和极浅阴影区分，不靠重色块 */
+  --bg:            #F6F7F3;
+  --bg-tint:       #FBFAF6;
+  --surface:       #FFFFFF;
+  --surface-soft:  #FBFAF7;
+  --glass:         rgba(255, 255, 255, .68);
+  --glass-strong:  rgba(255, 255, 255, .82);
+  --glass-edge:    rgba(255, 255, 255, .88);
+
+  /* 描边 / 分隔线 */
+  --line:          #E8EAE4;
+  --line-strong:   #DCE0D7;
+
+  /* 文字：深灰代替纯黑，护眼 */
+  --ink:           #333B3F;
+  --ink-soft:      #737C80;
+  --ink-faint:     #9AA2A5;
+
+  /* 强调色：低饱和豆绿，全站唯一彩色锚点 */
+  --accent:        #4F8C77;
+  --accent-dark:   #3E7461;
+  --accent-soft:   rgba(79, 140, 119, .10);
+  --accent-line:   rgba(79, 140, 119, .28);
+
+  /* 高光细节：卡片与封面上的每一层白色都收进令牌。
+     亮色用原值（像素级不变），暗色只覆盖这一段，规则本身一行不用改 */
+  --rim:           rgba(255, 255, 255, .9);    /* 卡片/面板顶部 1px 内高光 */
+  --rim-hover:     rgba(255, 255, 255, .95);   /* 同上，hover 时略强 */
+  --glass-hover:   rgba(255, 255, 255, .68);   /* 卡片 hover 的玻璃底 */
+  --card-line:     rgba(79, 140, 119, .28);    /* 卡片 hover 描边 */
+  --cover-tint:    rgba(79, 140, 119, .15);    /* 封面渐变：豆绿端 */
+  --cover-veil:    rgba(255, 255, 255, .5);    /* 封面渐变：白纱端 */
+  --cover-edge:    rgba(255, 255, 255, .72);   /* 封面 1px 描边 */
+  --cover-gloss:   rgba(255, 255, 255, .48);   /* 封面 ::after 斜光 */
+  --badge-glow:    rgba(79, 140, 119, .35);    /* 新书角标投影 */
+
+  /* 悬浮位移：亮色抬 4px 已经够轻；暗色阴影更重，抬 2px 就到位 */
+  --lift:          -4px;
+
+  /* 页面容器：顶栏与正文共用同一套左右边界，保证对齐 */
+  --page-max:      1120px;
+  --page-pad:      20px;
+
+  --radius:        14px;
+  --radius-sm:     10px;
+  --shadow-1:      0 2px 10px rgba(58, 70, 60, .06);
+  --shadow-2:      0 10px 28px rgba(58, 70, 60, .11);
+  --ease:          cubic-bezier(.2, .8, .2, 1);
+}
+
+/* 统一盒模型：宽度包含 padding 与 border，算尺寸更直观 */
+* { box-sizing: border-box; }
+
+/* ===================== 页面底色 + 整页骨架 ===================== */
+html { min-height: 100%; background: var(--bg); }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  /* 骨架套路：整页纵向排列，内容区自动撑满，页脚永远贴底 */
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Microsoft YaHei", "微软雅黑", sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(164, 201, 181, .20), transparent 34%),
+    radial-gradient(ellipse at 90% 20%, rgba(224, 204, 166, .18), transparent 30%),
+    linear-gradient(180deg, var(--bg-tint) 0%, var(--bg) 520px);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===================== 页头：Flex 两端对齐 ===================== */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /* 只留上下内边距；左右留白交给里面的 .header-inner 居中处理 */
+  padding: 14px 0;
+  background: rgba(255, 255, 255, .72);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid rgba(255, 255, 255, .82);
+  box-shadow: 0 8px 24px rgba(58, 70, 60, .06);
+}
+
+/* 页头内容容器：max-width 限宽 + margin:auto 居中，与 .layout 用同一套上限
+   和左右内边距，所以顶栏文字与下方正文严格对齐；
+   页头自己的半透明底色仍然铺满整行，不会被限宽切成一条浮条 */
+.header-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--page-pad);
+  /* Flex 两端对齐：品牌贴左、导航贴右，一行代码替代 float */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo { font-size: 26px; }
+.brand h1 {
+  margin: 0;
+  font-family: Georgia, "Songti SC", "宋体", serif;
+  font-size: 23px;
+  letter-spacing: .5px;
+  color: var(--ink);
+}
+
+/* 导航 + 购物车 + 暗色按钮：页头右侧一组，Flex 排开 */
+.header-actions { display: flex; align-items: center; gap: 14px; }
+
+/* 导航：Flex 排开，菜单项间距交给 gap，不再手写 margin */
+.site-nav { display: flex; align-items: center; gap: 8px; }
+.site-nav a {
+  padding: 7px 16px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-radius: 999px;
+}
+.site-nav a:hover { color: var(--accent); background: var(--accent-soft); }
+.site-nav a.active {
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+
+/* ===================== 两栏布局：Flex 一行搞定 ===================== */
+.layout {
+  /* content 抢走剩余空间，sidebar 定宽不缩；间距用 gap，不再手算百分比 */
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex: 1;               /* 撑满 body 剩余高度，页脚由此永远贴底 */
+  max-width: var(--page-max);
+  width: 100%;
+  margin: 24px auto 0;
+  padding: 0 var(--page-pad);
+}
+.content { flex: 1; min-width: 0; }        /* flex:1 等分地盘 */
+.sidebar { width: 30%; flex-shrink: 0; }   /* 定宽不参与伸缩 */
+
+/* ===================== 检索区（form 三件套） ===================== */
+.search-panel {
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--rim);
+}
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+.search-form .field { flex: 1; min-width: 160px; }
+
+/* label：控件的文字说明，for 与 id 对上暗号，点文字也能聚焦 */
+.search-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.search-form input,
+.search-form select {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.search-form input::placeholder { color: var(--ink-faint); }
+.search-form input:focus,
+.search-form select:focus {
+  background: var(--surface);
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* 主按钮：扁平豆绿，无渐变、无重阴影 */
+.btn,
+.search-btn,
+.add-cart {
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  cursor: pointer;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  /* 只给 transform 过渡：底色随主题变，一起过渡会在换肤时慢半拍 */
+  transition: transform .15s var(--ease);
+}
+.btn:hover,
+.search-btn:hover,
+.add-cart:hover { background: var(--accent-dark); box-shadow: 0 4px 14px rgba(79, 140, 119, .25); }
+.btn:active,
+.search-btn:active,
+.add-cart:active { transform: translateY(1px); }
+
+/* ===================== 交互控件（购物车 / 暗色切换 / 回到顶部） ===================== */
+/* 购物车计数：胶囊样式，数字变化时一眼可见 */
+.cart {
+  padding: 6px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  white-space: nowrap;
+}
+
+/* 图标按钮（暗色切换）：低调描边款，与导航胶囊同族 */
+.btn-icon {
+  padding: 6px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--ink-soft);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+.btn-icon:hover { color: var(--accent-dark); background: var(--accent-soft); border-color: var(--accent-line); }
+
+/* 回到顶部：父相子绝之外的另一种定位——fixed 钉死在屏幕右下角 */
+.top-btn {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  cursor: pointer;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(58, 70, 60, .28);
+  transition: transform .15s var(--ease);
+}
+.top-btn:hover { background: var(--accent-dark); }
+.top-btn:active { transform: translateY(1px); }
+
+/* 卡片里的「加入购物车」按钮：占满一行，与价格拉开距离 */
+.book-card .add-cart {
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 0;
+  font-size: 13.5px;
+}
+
+/* ===================== 暗色模式：只换变量，不推翻风格 ===================== */
+/* JS 只负责 toggle 这个类；颜色变化全部由这里的变量覆盖完成 */
+body.dark {
+  --bg:            #1C2226;
+  --bg-tint:       #20272C;
+  --surface:       #262E33;
+  --surface-soft:  #2A3237;
+  --glass:         rgba(38, 46, 51, .68);
+  --glass-strong:  rgba(44, 53, 58, .82);
+  --glass-edge:    rgba(255, 255, 255, .10);
+  --line:          #3A444A;
+  --line-strong:   #46525A;
+  --ink:           #D5DCDE;
+  --ink-soft:      #9AA6AB;
+  --ink-faint:     #6E7A80;
+  /* 暗色下强调色提亮一档，保持对比度 */
+  --accent:        #6FB09A;
+  --accent-dark:   #5D9C87;
+  --accent-soft:   rgba(111, 176, 154, .14);
+  --accent-line:   rgba(111, 176, 154, .32);
+  /* 暗色高光层：白色一律压到 5%–10%，只留一层薄薄的反光，不再「顶着一条白线」 */
+  --rim:           rgba(255, 255, 255, .07);
+  --rim-hover:     rgba(255, 255, 255, .10);
+  --glass-hover:   rgba(44, 53, 58, .78);
+  --card-line:     rgba(111, 176, 154, .24);
+  --cover-tint:    rgba(111, 176, 154, .16);
+  --cover-veil:    rgba(255, 255, 255, .05);
+  --cover-edge:    rgba(255, 255, 255, .08);
+  --cover-gloss:   rgba(255, 255, 255, .06);
+  --badge-glow:    rgba(0, 0, 0, .30);
+  --shadow-1:      0 2px 10px rgba(0, 0, 0, .25);
+  --shadow-2:      0 6px 16px rgba(0, 0, 0, .34);   /* 原 0 10px 28px rgba(0,0,0,.38) */
+  --lift:          -2px;
+}
+body.dark {
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(79, 140, 119, .12), transparent 34%),
+    radial-gradient(ellipse at 90% 20%, rgba(224, 204, 166, .07), transparent 30%),
+    linear-gradient(180deg, var(--bg-tint) 0%, var(--bg) 520px);
+}
+body.dark .site-header {
+  background: rgba(28, 34, 38, .72);
+  border-bottom-color: rgba(255, 255, 255, .08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+body.dark .site-footer {
+  background: rgba(28, 34, 38, .54);
+}
+
+/* ===================== 区块标题 ===================== */
+.section-title {
+  position: relative;
+  margin: 0 0 16px;
+  padding-left: 13px;
+  font-family: Georgia, "Songti SC", "宋体", serif;
+  font-size: 19px;
+  color: var(--ink);
+}
+.section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 4px;
+  height: 1.05em;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: var(--accent);
+}
+
+/* ===================== 图书卡片：wrap + gap 弹性网格 ===================== */
+.cards {
+  display: flex;
+  flex-wrap: wrap;   /* 放不下就换行 */
+  gap: 12px;         /* 行列间距一把抓 */
+}
+
+.book-card {
+  position: relative;   /* 1. 父：圈地盘，给「新书」角标当定位老爸 */
+  flex: 1;              /* 平分剩余空间 */
+  min-width: 220px;     /* 太窄就提前换行，绝不压扁内容 */
+  padding: 10px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--glass-edge);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--rim);
+  /* 只给 transform 过渡：底色 / 描边 / 阴影都随主题变，
+     若把它们也放进过渡，切主题时卡片会独自慢半拍（背景早就变完了） */
+  transition: transform .25s var(--ease);
+}
+.book-card:hover {
+  transform: translateY(var(--lift));      /* 亮色 -4px（不变） / 暗色 -2px */
+  background: var(--glass-hover);          /* 亮色 = var(--glass)，无变化；暗色 .68 → .78 */
+  border-color: var(--card-line);          /* 亮色 .28（不变） / 暗色 薄荷 .24 */
+  box-shadow: var(--shadow-2), inset 0 1px 0 var(--rim-hover);
+}
+
+/* 「新书」角标：父相子绝，钉在卡片右上角（z-index 压住封面） */
+.badge-new {
+  position: absolute;   /* 2. 子：脱离文档流 */
+  top: 10px;            /* 3. 钉到右上角 */
+  right: 10px;
+  z-index: 1;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px var(--badge-glow);
+}
+
+/* 搜索无结果的提示（数据驱动版：空结果也是一种状态） */
+.empty {
+  width: 100%;
+  margin: 0;
+  padding: 34px 0;
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  background: var(--surface-soft);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+/* 「暂无库存」标记：低饱和陶土色，只提示不刺眼 */
+.stock-out {
+  margin: 10px 0 0;
+  padding: 7px 0;
+  font-size: 13.5px;
+  text-align: center;
+  color: #A8745B;
+  background: rgba(168, 116, 91, .10);
+  border-radius: var(--radius-sm);
+}
+
+/* 封面占位 */
+.cover {
+  position: relative;   /* 给 ::after 的高光层当定位老爸 */
+  /* Flex 居中：justify-content 管水平、align-items 管垂直（第 3 次课的内容） */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 74px;
+  color: var(--ink-soft);
+  background: linear-gradient(135deg, var(--cover-tint), var(--cover-veil));
+  border: 1px solid var(--cover-edge);
+  border-radius: 6px;
+  font-size: 16px;
+  overflow: hidden;
+}
+.cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, var(--cover-gloss), transparent 55%);
+}
+
+.info { padding-top: 8px; }
+.book-title  { display: inline; margin: 0; font-size: 16px; font-weight: 400; color: var(--ink); }
+.book-author { display: inline; margin: 0; font-size: 16px; color: var(--ink); }
+.book-author::before { content: "："; }
+.book-price  { margin: 6px 0 0; font-size: 17px; font-weight: 700; color: var(--accent-dark); }
+
+/* ===================== 侧栏面板 ===================== */
+.panel {
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--rim);
+}
+.panel h3 {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  font-family: Georgia, "Songti SC", "宋体", serif;
+  font-size: 16.5px;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.panel ul, .panel ol { margin: 0; padding-left: 20px; line-height: 2; }
+.panel li { color: var(--ink-soft); }
+.panel a { color: var(--accent-dark); text-decoration: none; }
+.panel a:hover { color: var(--accent); text-decoration: underline; }
+
+/* ===================== 页脚 ===================== */
+.site-footer {
+  margin-top: 20px;
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+  background: rgba(255, 255, 255, .54);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+  backdrop-filter: blur(12px) saturate(135%);
+  border-top: 1px solid var(--glass-edge);
+}
+.site-footer p { margin: 0; }
+
+/* ===================== 响应式：跟着屏幕变布局 ===================== */
+/* 中等宽度：侧栏整体下移到正文下方，正文占满一行 */
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .content,
+  .sidebar { width: 100%; flex: none; }
+  .search-form .field { min-width: 200px; }
+}
+
+/* 更窄时才允许顶栏折行，避免一窄就「塌成两行」 */
+@media (max-width: 600px) {
+  .header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .site-nav { flex-wrap: wrap; }
+  /* 手机单列：解除卡片宽度下限，一列到底 */
+  .book-card { min-width: 100%; }
+}
+
+/* ===================== 无障碍 ===================== */
+/* 尊重系统「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation: none !important; }
+}
+
+/* ===================== 关于过渡的一条约定 ===================== */
+/* 全站只对 transform 做过渡（按钮按下、卡片上浮）。
+   因为底色 / 描边 / 阴影都会随 body.dark 切换，
+   一旦它们也写进 transition，换肤时这些元素就会各自慢半拍；
+   而页面底色是多层渐变，CSS 没法插值、只能瞬间变，两者永远对不上。
+   只过渡 transform，换肤就是全站同一帧完成。 */
+
+/* ===================== Vue 版补丁（第 6 次课） ===================== */
+/* 原生版里 header / .layout / footer 直接挂在 body 上，body 是 flex column，
+   所以 .layout 的 flex:1 能把页脚顶到最底。
+   进了 Vue 之后多了一层 #app，上面三块成了它的孙子，
+   这一层必须替 body 接管 flex column，否则页脚在内容不足一屏时会悬在半空。 */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}

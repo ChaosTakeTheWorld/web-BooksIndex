@@ -101,20 +101,27 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
-  /* Flex 两端对齐：品牌贴左、导航贴右，一行代码替代 float */
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  /* 左右内边距跟随 .layout 的内容边界：顶栏文字与下方正文严格对齐 */
-  padding: 14px var(--page-pad);
-  padding-left: max(var(--page-pad), calc((100% - var(--page-max)) / 2 + var(--page-pad)));
-  padding-right: max(var(--page-pad), calc((100% - var(--page-max)) / 2 + var(--page-pad)));
+  /* 只留上下内边距；左右留白交给里面的 .header-inner 居中处理 */
+  padding: 14px 0;
   background: rgba(255, 255, 255, .72);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
   border-bottom: 1px solid rgba(255, 255, 255, .82);
   box-shadow: 0 8px 24px rgba(58, 70, 60, .06);
+}
+
+/* 页头内容容器：max-width 限宽 + margin:auto 居中，与 .layout 用同一套上限
+   和左右内边距，所以顶栏文字与下方正文严格对齐；
+   页头自己的半透明底色仍然铺满整行，不会被限宽切成一条浮条 */
+.header-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--page-pad);
+  /* Flex 两端对齐：品牌贴左、导航贴右，一行代码替代 float */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
 
 .brand { display: flex; align-items: center; gap: 10px; }
@@ -138,7 +145,6 @@ body {
   color: var(--ink-soft);
   text-decoration: none;
   border-radius: 999px;
-  transition: color .2s, background .2s;
 }
 .site-nav a:hover { color: var(--accent); background: var(--accent-soft); }
 .site-nav a.active {
@@ -199,7 +205,6 @@ body {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color .2s, box-shadow .2s, background .2s;
 }
 .search-form input::placeholder { color: var(--ink-faint); }
 .search-form input:focus,
@@ -222,7 +227,8 @@ body {
   background: var(--accent);
   border: none;
   border-radius: var(--radius-sm);
-  transition: background .2s, transform .15s var(--ease), box-shadow .2s;
+  /* 只给 transform 过渡：底色随主题变，一起过渡会在换肤时慢半拍 */
+  transition: transform .15s var(--ease);
 }
 .btn:hover,
 .search-btn:hover,
@@ -255,7 +261,6 @@ body {
   background: transparent;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  transition: color .2s, background .2s, border-color .2s;
 }
 .btn-icon:hover { color: var(--accent-dark); background: var(--accent-soft); border-color: var(--accent-line); }
 
@@ -275,7 +280,7 @@ body {
   border: none;
   border-radius: 999px;
   box-shadow: 0 6px 18px rgba(58, 70, 60, .28);
-  transition: background .2s, transform .15s var(--ease);
+  transition: transform .15s var(--ease);
 }
 .top-btn:hover { background: var(--accent-dark); }
 .top-btn:active { transform: translateY(1px); }
@@ -376,9 +381,9 @@ body.dark .site-footer {
   border: 1px solid var(--glass-edge);
   border-radius: 14px;
   box-shadow: var(--shadow-1), inset 0 1px 0 var(--rim);
-  /* background 也进过渡：暗色 hover 时玻璃底会轻轻变亮 */
-  transition: transform .25s var(--ease), box-shadow .25s,
-              border-color .25s, background .25s;
+  /* 只给 transform 过渡：底色 / 描边 / 阴影都随主题变，
+     若把它们也放进过渡，切主题时卡片会独自慢半拍（背景早就变完了） */
+  transition: transform .25s var(--ease);
 }
 .book-card:hover {
   transform: translateY(var(--lift));      /* 亮色 -4px（不变） / 暗色 -2px */
@@ -430,8 +435,10 @@ body.dark .site-footer {
 /* 封面占位 */
 .cover {
   position: relative;   /* 给 ::after 的高光层当定位老爸 */
-  display: grid;
-  place-items: center;
+  /* Flex 居中：justify-content 管水平、align-items 管垂直（第 3 次课的内容） */
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 74px;
   color: var(--ink-soft);
   background: linear-gradient(135deg, var(--cover-tint), var(--cover-veil));
@@ -503,7 +510,7 @@ body.dark .site-footer {
 
 /* 更窄时才允许顶栏折行，避免一窄就「塌成两行」 */
 @media (max-width: 600px) {
-  .site-header {
+  .header-inner {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
@@ -513,38 +520,15 @@ body.dark .site-footer {
   .book-card { min-width: 100%; }
 }
 
-/* ===================== 优雅降级 & 无障碍 ===================== */
-/* 不支持 backdrop-filter：玻璃表面改为不透明白底 */
-@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .site-header,
-  .search-panel,
-  .book-card,
-  .panel,
-  .site-footer { background: var(--surface); }
-  /* 悬停也保持不透明：:hover 的优先级更高，不补这条会把降级效果盖回去 */
-  .book-card:hover { background: var(--surface); }
-}
-
+/* ===================== 无障碍 ===================== */
 /* 尊重系统「减少动态效果」设置 */
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: .01ms !important; animation: none !important; }
 }
 
-/* ===================== 主题切换：整页同一帧换完 ===================== */
-/* 背景是三层渐变（<image> 类型），CSS 无法插值 → 只能瞬间变；
-   而卡片 250ms、按钮/输入框 200ms 还在慢慢过渡，两件事不同步，
-   就成了「背景先黑、卡片慢半拍」。
-   既然渐变没法平滑，就反过来：让所有表面在同一帧一起瞬间换完。
-   做法：换肤那一瞬间给 <html> 挂上这个临时类，把全站过渡一起关掉，
-   换完立刻摘掉 —— 所以 hover 的动效一点不受影响。
-   !important 不能省：这条规则是在跟各处已有的 transition 抢话事权；
-   而且要保证它不依赖「恰好写在最后」这个巧合，将来谁补一条
-   .book-card:hover { transition: ... } 也不会让守卫静默失效。
-   选择器写 html 而不是 body：body 自己也在换肤，html.no-anim *
-   一条就同时罩住 body 和它下面所有元素；* 不匹配伪元素，故补两条。 */
-html.no-anim,
-html.no-anim *,
-html.no-anim *::before,
-html.no-anim *::after {
-  transition: none !important;
-}
+/* ===================== 关于过渡的一条约定 ===================== */
+/* 全站只对 transform 做过渡（按钮按下、卡片上浮）。
+   因为底色 / 描边 / 阴影都会随 body.dark 切换，
+   一旦它们也写进 transition，换肤时这些元素就会各自慢半拍；
+   而页面底色是多层渐变，CSS 没法插值、只能瞬间变，两者永远对不上。
+   只过渡 transform，换肤就是全站同一帧完成。 */

@@ -8,21 +8,24 @@
 </head>
 <body>
   <header class="site-header" id="site-header">
-    <div class="brand">
-      <span class="logo" aria-hidden="true">📚</span>
-      <h1>启点图书</h1>
-    </div>
-    <div class="header-actions">
-      <nav class="site-nav" id="site-nav" aria-label="主导航">
-        <a class="active" href="#" aria-current="page">首页</a>
-        <a href="#">检索</a>
-        <a href="#">分类</a>
-        <a href="#">关于</a>
-      </nav>
-      <!-- 购物车计数器：数字显示在页面上，真相存在 JS 变量 count 里 -->
-      <span class="cart" id="cart">购物车 (0)</span>
-      <!-- 暗色模式按钮：只切一个类名，颜色变化全部交给 CSS -->
-      <button class="btn-icon" id="modeBtn" type="button" aria-pressed="false">🌙 暗色</button>
+    <!-- 内容容器：只管排版居中，不表达语义，所以用 div（第 2 次课：div 不是不能用，是不滥用） -->
+    <div class="header-inner">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">📚</span>
+        <h1>启点图书</h1>
+      </div>
+      <div class="header-actions">
+        <nav class="site-nav" id="site-nav" aria-label="主导航">
+          <a class="active" href="#" aria-current="page">首页</a>
+          <a href="#">检索</a>
+          <a href="#">分类</a>
+          <a href="#">关于</a>
+        </nav>
+        <!-- 购物车计数器：数字显示在页面上，真相存在 JS 变量 count 里 -->
+        <span class="cart" id="cart">购物车 (0)</span>
+        <!-- 暗色模式按钮：只切一个类名，颜色变化全部交给 CSS -->
+        <button class="btn-icon" id="modeBtn" type="button" aria-pressed="false">🌙 暗色</button>
+      </div>
     </div>
   </header>
 
@@ -32,15 +35,16 @@
       <section class="search-panel" id="search-panel" aria-label="图书检索">
         <form action="#" class="search-form" method="get" id="search-form">
           <div class="field">
-            <label for="keyword">书名关键字</label>
-            <input id="keyword" name="keyword" placeholder="如：山 / 刘慈欣 / 9787…" required type="text">
+            <label for="keyword">书名 / 作者</label>
+            <input id="keyword" name="keyword" placeholder="如：山 / 刘慈欣" type="text">
           </div>
           <div class="field">
             <label for="category">图书分类</label>
             <select id="category" name="category">
               <option value="all">全部</option>
-              <option value="computer">计算机</option>
+              <option value="scifi">科幻</option>
               <option value="literature">文学</option>
+              <option value="mystery">悬疑</option>
             </select>
           </div>
           <button class="search-btn" type="submit">检索</button>
@@ -48,7 +52,7 @@
       </section>
 
       <section class="book-list" id="book-list" aria-labelledby="new-books-title">
-        <h2 class="section-title" id="new-books-title">新书推荐</h2>
+        <h2 class="section-title" id="new-books-title">全部图书</h2>
         <!-- 书卡已改为数据驱动（第 5 次课）：
              页面内容由 main.js 里的 books 数组决定，HTML 只是数据的投影 -->
         <div class="cards"></div>

@@ -10,32 +10,15 @@ console.log("你好，JS！启点图书的脚本已加载");   // 按 F12 → Co
 
 /* ---------- 案例 A：暗色模式（第 4 次课） ----------
    思路：JS 不逐个改颜色（太累），只在 body 上切一个类名；
-   颜色变化全部交给 CSS 里的 body.dark 变量覆盖——各干各的。
-   时序补丁：换肤改成「整页同一帧变完」，见下面 ①②③④⑤。 */
+   颜色变化全部交给 CSS 里的 body.dark 变量覆盖——各干各的。 */
 
 // 1. 找元素：用 CSS 选择器锁定按钮
 const modeBtn = document.querySelector("#modeBtn");
-const root = document.documentElement;   // 根元素 <html>：换肤时挂「临时锁」用
 
 // 2. 绑事件：谁（modeBtn）+ 什么动作（click）+ 干什么（函数）
 modeBtn.addEventListener("click", function () {
   // 3. 改状态：toggle = 有 dark 类就移除，没有就添加（开关灯）
-  //    换肤要「整页同一帧变完」：背景是渐变、没法插值，只能瞬间变；
-  //    那就让卡片（250ms）、按钮输入框（200ms）也一起瞬间变。
-  //    办法：切类前后给 <html> 挂一把临时锁，把全站过渡关掉。
-  root.classList.add("no-anim");            // ① 上锁
-  void root.offsetHeight;                   // ② 强制结算：让浏览器认下这把锁
-  document.body.classList.toggle("dark");   // ③ 换肤（主题开关仍然只在 body 上）
-  void root.offsetHeight;                   // ④ 再结算：暗色值在锁还挂着时落定
-  root.classList.remove("no-anim");         // ⑤ 解锁：hover 动效原样回来
-
-  // ②④ 两次结算都不能省——这是整段唯一容易写错的地方：
-  // 同一个任务里连改几次类，浏览器只在最后算一次样式。
-  //   少了② →「上锁」被合并掉，等于没锁；
-  //   少了④ → 摘锁那一刻才结算，浏览器看到的是「亮 → 暗」的差值，
-  //            会重新起一段渐变，bug 原封不动还在。
-  // 读 offsetHeight 会强制同步重排（先算样式、再算布局），是三种写法里
-  // 最短、最同步的一种；void 只是说「我故意读一下就丢，不是要用它」。
+  document.body.classList.toggle("dark");
 
   // 顺手同步按钮文字，并告知无障碍设备当前状态
   const isDark = document.body.classList.contains("dark");
@@ -99,7 +82,8 @@ function render(list) {
       "<div class='info'>" +
       "<h3 class='book-title'>" + b.title + "</h3>" +
       "<p class='book-author'>" + b.author + "</p>" +
-      "<p class='book-price'>¥" + b.price.toFixed(2) + "</p>" +
+      // Number() 兜一层：万一价格被写成字符串 "19.00"，toFixed 会报错、整页画不出来
+      "<p class='book-price'>¥" + Number(b.price).toFixed(2) + "</p>" +
       action +
       "</div></article>";
   });
@@ -107,12 +91,75 @@ function render(list) {
   bindAddButtons();   // 新卡片刚出生，购物车按钮要重新绑一遍
 }
 
+/* ---------- 数据 + 一个「数据到没到」的开关 ----------
+   books 装书单，dataReady 装状态。
+   为什么还要开关？搜索监听器已经搬到 fetch 外面、全天候待命，
+   它必须先问一句「现在有数据可筛吗」，否则会拿空数组去渲染，
+   把页面刷成「没有找到相关图书」——那是在撒谎。 */
+
+let books = [];          // 接口数据到手前的空数组
+let dataReady = false;   // false = 还没拿到数据（或加载失败）
+
+/* ---------- 三个表单元素，先找好，只找一次 ---------- */
+
+const keywordInput = document.querySelector("#keyword");      // 关键字输入框
+const categorySelect = document.querySelector("#category");    // 分类下拉框
+const searchForm = document.querySelector("#search-form");     // 整个表单
+
+/* ---------- 过滤：全页唯一的「算结果」入口 ----------
+   input、change、submit 三处用的是同一套规则，
+   抽成一个函数，就不会出现「改了这处忘了那处」。
+   参数不用传：两个控件的值在函数里现读，永远是最新的。 */
+
+function applyFilter() {
+  // 守门：数据没到手就什么都不做，页面保持原样
+  if (dataReady === false) {
+    return;
+  }
+
+  const kw = keywordInput.value;            // 关键字原样用（本课不教 trim / toLowerCase）
+  const category = categorySelect.value;    // all / scifi / literature / mystery
+
+  // filter = 安检门：函数返回 true 的书放行，返回一个新数组
+  const result = books.filter(function (b) {
+    // 书名命中 或 作者命中，都算命中；kw 是 "" 时 includes 对谁都返回 true
+    const matchKeyword = b.title.includes(kw) || b.author.includes(kw);
+    // 选「全部」时这一关永远放行；否则要求书上的 category 与下拉框的值一致
+    const matchCategory = category === "all" || b.category === category;
+    return matchKeyword && matchCategory;   // 两关都过才留下
+  });
+
+  render(result);
+}
+
+/* ---------- 三个监听器：全部写在 fetch 外面 ----------
+   老写法把监听器塞进 then，等于把「绑事件」和「拿数据」绑死：
+   接口一失败，then 根本不执行，监听器永远绑不上，输入框成摆设。
+   现在先绑好，数据好坏都能用。 */
+
+// ① input：边打边搜，每敲一个字符（含删除）都触发
+keywordInput.addEventListener("input", function () {
+  applyFilter();
+});
+
+// ② change：下拉框的值真的变了才触发
+categorySelect.addEventListener("change", function () {
+  applyFilter();
+});
+
+// ③ submit：按回车、点「检索」，都走这里
+searchForm.addEventListener("submit", function (event) {
+  // 表单默认提交 = 把地址改成 ?keyword=… 并整页刷新，
+  // 刷新后所有 JS 变量重来——购物车归零、筛选状态全丢。
+  // preventDefault() 就是告诉浏览器「这次别刷新」。
+  event.preventDefault();
+  applyFilter();   // 拦住之后补一次过滤：手动点「检索」也该立刻出结果
+});
+
 /* ---------- fetch 接口版（第 5 次课） ----------
    书单不再写死在 JS 里，而是从 books.json 拿——
    就像点外卖：发请求 → 服务器打包 → 拆餐盒（res.json()）→ 开吃（render）。
    异步铁律：要用接口数据的代码，必须写进 then 里。 */
-
-let books = [];   // 接口数据到手前的空数组
 
 fetch("books.json")                                  // ① 发请求
   .then(function (res) {
@@ -120,20 +167,15 @@ fetch("books.json")                                  // ① 发请求
   })
   .then(function (data) {
     books = data;                                    // ③ 数据到手，存起来
-    render(books);                                   // ④ 渲染函数一个字没改，直接复用
-
-    /* ---------- 实时搜索 ----------
-       三步法的变体：找元素（input）→ 绑事件（input 类型）→
-       改状态（过滤 + 重新渲染）。
-       写在 then 里，因为搜索过滤的是接口拿回来的数据——异步铁律。 */
-    const input = document.querySelector("#keyword");
-
-    input.addEventListener("input", function () {
-      const kw = input.value;                        // 当前输入内容
-      // filter = 安检门：函数返回 true 的书放行，返回一个新数组
-      const result = books.filter(function (b) {
-        return b.title.includes(kw);
-      });
-      render(result);   // 清空搜索框时 kw 是 ""，includes 对谁都 true → 显示全部
-    });
+    dataReady = true;                                // ④ 先开开关，再调用过滤
+    applyFilter();                                   // ⑤ 按当前输入渲染（空框 → 全部）
+  })
+  .catch(function (error) {
+    // catch 是整条链的「兜底网」：上面任何一步出错（断网、路径写错、
+    // JSON 写坏）都会跳过剩下的 then，直接掉进这里。
+    // 位置必须放最后——写在中间，它后面那一步的错误就兜不住了。
+    // 文案要和「没有找到相关图书」区分开：一个是没加载上，一个是真没搜到。
+    cardsBox.innerHTML = "<p class='empty'>书单加载失败，请检查网络或 books.json 路径后刷新页面</p>";
+    console.log("books.json 加载失败：", error);      // F12 → Console 里能看到真正的原因
+    // dataReady 保持 false：此后输入关键字会被守门挡住，这句提示不会被冲掉
   });
