@@ -5,6 +5,7 @@
      · 老 index.html 的 <body> 内部结构，剪进下面的 <template>
      · 老 main.js 里「拼字符串」的卡片，换成 v-for 自动生成
      · 老 main.js 里的 count 变量，换成 ref，点一下数字自己变
+     · 第 4 次课的暗色按钮与回到顶部，也一并搬回来
    组件化与 v-model 是第 7 次课，本次不做。
    ============================================================ */
 
@@ -33,20 +34,18 @@ const books = ref([
 // 不再有「先改变量、再手动改页面文字」两步。
 const count = ref(0);
 
-// P20 动手②第 4 步：往 books 里 push 一本新书，看列表自己长出来。
-// books 是 ref，数组本体挂在 .value 上，所以必须写 books.value.push；
-// 写成 books.push(...) 会报 "books.push is not a function"。
-function addBook() {
-  // 用「长度 + 1」拼书名，保证每次新增的 title 都不重复——:key="b.title" 的前提
-  const next = books.value.length + 1;
-  books.value.push({
-    title: "待定新书 " + next,
-    author: "匿名作者",
-    category: "scifi",
-    price: 39.0,
-    inStock: true,
-    isNew: true,
-  });
+// 第 4 次课：暗色模式（本次补回）。
+// 思路和原生版一样——JS 只切一个类名，颜色全部交给 style.css 里的 body.dark 覆盖。
+// 注意：主题类必须挂在 <body> 上（样式写的是 body.dark { … }），
+// 而 <body> 在 Vue 的挂载点 #app 外面，所以这一步是直接改它。
+// 这是本页唯一一处「DOM 操作」，其余显示全部由数据驱动。
+const isDark = ref(false);
+
+function toggleTheme() {
+  isDark.value = !isDark.value;   // 先改状态
+  // 第二个参数是「强制设为这个状态」：true 就加、false 就删，
+  // 比先判断再 add/remove 少两行，也不会出现类名和状态对不上的情况
+  document.body.classList.toggle("dark", isDark.value);
 }
 
 // 回到顶部：第 4 次课的按钮，Vue 里只需改数据之外的一个调用。
@@ -80,8 +79,19 @@ function backTop() {
              这一行就是 P18 案例 B 的「显示端」。 -->
         <span class="cart">购物车 ({{ count }})</span>
 
-        <!-- 暗色按钮本次不搬：它要切 body.dark，属第 4 次课的内容。
-             和检索区同一个理由——不做「看得见、按了没用」的控件。 -->
+        <!-- 第 4 次课的暗色按钮，本次补回。
+             两个 v-bind 的用法：
+               :aria-pressed  —— 把 isDark 绑到无障碍属性上，读屏器才知道当前是暗是亮；
+               {{ }} 里的三元 —— 按钮文字跟着状态换，不用手动改 textContent。
+             @click 只写方法名，不带括号。 -->
+        <button
+          class="btn-icon"
+          type="button"
+          :aria-pressed="isDark ? 'true' : 'false'"
+          @click="toggleTheme"
+        >
+          {{ isDark ? "☀️ 亮色" : "🌙 暗色" }}
+        </button>
       </div>
     </div>
   </header>
@@ -94,20 +104,10 @@ function backTop() {
       <section class="book-list" aria-labelledby="new-books-title">
         <h2 class="section-title" id="new-books-title">全部图书</h2>
 
-        <!-- P20 动手②第 4 步的演示按钮。
-             外面套一个 <p>：<p> 自带上下外边距，正好把标题与卡片网格隔开，
-             这样 style.css 仍然「一个字不用改」。
-             注意别把按钮放进 .cards 里——那它会变成一个 flex item 参与分栏。 -->
-        <p>
-          <button class="btn" type="button" @click="addBook">
-            ＋ 放入一本新书（体验响应式）
-          </button>
-        </p>
-
         <div class="cards">
           <!-- P14 v-for：六本书一次说完。
-               :key="b.title" 给每张卡发身份证，push 新书时 Vue 才知道
-               是「多了一张」而不是「六张全重画」。
+               :key="b.title" 给每张卡发身份证，数据一变 Vue 才知道
+               是哪一张动了，而不是六张全部重画。
                注意：v-if 不能和 v-for 写在同一个元素上（Vue 3 里 v-if 优先级更高，
                会拿不到 b 而报错），所以下面的条件都落在子节点。 -->
           <article v-for="b in books" :key="b.title" class="book-card">
