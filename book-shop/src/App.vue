@@ -6,7 +6,8 @@
      · 老 main.js 里「拼字符串」的卡片，换成 v-for 自动生成
      · 老 main.js 里的 count 变量，换成 ref，点一下数字自己变
      · 第 4 次课的暗色按钮与回到顶部，也一并搬回来
-   组件化与 v-model 是第 7 次课，本次不做。
+     · 第 5 次课的检索区（关键字 + 分类）搬回来，过滤结果放进 filtered
+   组件化留给第 7 次课；v-model 也在第 7 次课，届时输入框那两行可合成一行。
    ============================================================ */
 
 // P13：ref 是给数据装「监视器」。
@@ -33,6 +34,43 @@ const books = ref([
 // 真相只有 count 一个 ref，页面上那个数字只是它的投影——
 // 不再有「先改变量、再手动改页面文字」两步。
 const count = ref(0);
+
+/* ---------- 检索区（第 5 次课的原生版逻辑，本次搬进 Vue） ----------
+   三个 ref 各管一件事：
+     keyword  —— 输入框里的字
+     category —— 下拉框选的值
+     filtered —— 算完之后「当前要显示的书」
+   改关键字、改分类都只做同一件事：重新算一遍 filtered。
+   页面由 v-for 自动跟上，没有一行手动拼 DOM。
+   注：第 7 次课学了 v-model，input / select 下面那两处取值赋值
+   可以各合成一行；现在先按第 4 次课学过的「@事件 + ref」写。 */
+const keyword = ref("");
+const category = ref("all");
+const filtered = ref([]);   // 初值先空着，下面 applyFilter() 会立刻填满
+
+function applyFilter() {
+  filtered.value = books.value.filter(function (b) {
+    // 书名命中 或 作者命中，都算命中；keyword 是 "" 时 includes 对谁都返回 true
+    const matchKeyword = b.title.includes(keyword.value) || b.author.includes(keyword.value);
+    // 选「全部」时这一关永远放行，否则要求书上的 category 与下拉框一致
+    const matchCategory = category.value === "all" || b.category === category.value;
+    return matchKeyword && matchCategory;   // 两关都过才留下
+  });
+}
+
+// 输入框每敲一个字都会调用一次：先把最新文字存进 ref，再重新算
+function onKeywordInput(event) {
+  keyword.value = event.target.value;
+  applyFilter();
+}
+
+// 下拉框的值真的变了才调用
+function onCategoryChange(event) {
+  category.value = event.target.value;
+  applyFilter();
+}
+
+applyFilter();   // 进页面先算一次：关键字为空、分类为全部 → 六本全显示
 
 // 第 4 次课：暗色模式（本次补回）。
 // 思路和原生版一样——JS 只切一个类名，颜色全部交给 style.css 里的 body.dark 覆盖。
@@ -98,19 +136,50 @@ function backTop() {
 
   <div class="layout">
     <main class="content">
-      <!-- 检索区 .search-panel 本次不搬：
-           没有 v-model 之前，输入了也不会有结果。
-           第 7 次课学完 v-model 再原样加回来。 -->
+      <!-- 检索区：从第 5 次课的原生版搬回来，并且真的能用。
+           过滤结果存在 filtered 里，改关键字 / 改分类都只是重新算一次 filtered，
+           卡片列表由 v-for 自动跟上——全程没有手动改 DOM。 -->
+      <section class="search-panel" aria-label="图书检索">
+        <!-- @submit.prevent：拦住表单默认的整页刷新（第 5 次课用 preventDefault 干的事） -->
+        <form class="search-form" @submit.prevent>
+          <div class="field">
+            <label for="keyword">书名 / 作者</label>
+            <!-- :value 单向下发、@input 单向上报，两行代码等于 v-model 干的事 -->
+            <input
+              id="keyword"
+              name="keyword"
+              placeholder="如：山 / 刘慈欣"
+              type="text"
+              :value="keyword"
+              @input="onKeywordInput"
+            >
+          </div>
+          <div class="field">
+            <label for="category">图书分类</label>
+            <select id="category" name="category" :value="category" @change="onCategoryChange">
+              <option value="all">全部</option>
+              <option value="scifi">科幻</option>
+              <option value="literature">文学</option>
+              <option value="mystery">悬疑</option>
+            </select>
+          </div>
+          <button class="search-btn" type="submit">检索</button>
+        </form>
+      </section>
+
       <section class="book-list" aria-labelledby="new-books-title">
         <h2 class="section-title" id="new-books-title">全部图书</h2>
 
         <div class="cards">
+          <!-- 一条书都筛不出来时，给一句话，别让页面白着（对应原生版的 .empty） -->
+          <p v-if="filtered.length === 0" class="empty">没有找到相关图书</p>
+
           <!-- P14 v-for：六本书一次说完。
-               :key="b.title" 给每张卡发身份证，数据一变 Vue 才知道
+               :key="b.title" 给每张卡发身份证，列表一变 Vue 才知道
                是哪一张动了，而不是六张全部重画。
                注意：v-if 不能和 v-for 写在同一个元素上（Vue 3 里 v-if 优先级更高，
                会拿不到 b 而报错），所以下面的条件都落在子节点。 -->
-          <article v-for="b in books" :key="b.title" class="book-card">
+          <article v-for="b in filtered" :key="b.title" class="book-card">
             <!-- P14 v-if：isNew 为真，角标才出现 -->
             <span v-if="b.isNew" class="badge-new">新书</span>
 

@@ -76,7 +76,11 @@
 * { box-sizing: border-box; }
 
 /* ===================== 页面底色 + 整页骨架 ===================== */
-html { min-height: 100%; background: var(--bg); }
+/* 这里只定高度、不写背景色。
+   原因：html 是 body 的父元素，看不到 body.dark 里重定义的 --bg，
+   一旦写成 background: var(--bg)，暗色下画布仍是亮色（回弹、缩放时露白边）。
+   不写背景时，body 的背景会自动「传播」到画布，跟着主题一起变。 */
+html { min-height: 100%; }
 
 body {
   margin: 0;
@@ -122,6 +126,10 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  /* 放不下时整组换到第二行，而不是把「首页」两个字拆成上下两截。
+     窄窗口（约 600–700px）下原本会把菜单挤成两行字，高度从 44px 涨到 78px。 */
+  flex-wrap: wrap;
+  row-gap: 10px;
 }
 
 .brand { display: flex; align-items: center; gap: 10px; }
@@ -145,6 +153,9 @@ body {
   color: var(--ink-soft);
   text-decoration: none;
   border-radius: 999px;
+  /* 中文默认可以在任意两字之间断行，菜单被挤时会变成「首/页」两行；
+     禁止断行，让它整块换行到下一排去 */
+  white-space: nowrap;
 }
 .site-nav a:hover { color: var(--accent); background: var(--accent-soft); }
 .site-nav a.active {
@@ -248,6 +259,12 @@ body {
   border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--accent-line);
   white-space: nowrap;
+  /* 宽度锁死，数字变多也不许变宽：
+     胶囊一变宽，右边的按钮不动、左边的导航整体被推走，看起来像在「抽动」。
+     tabular-nums 让 0/1/8 占同样宽度，min-width 再预留到三位数（100 次加购）。 */
+  font-variant-numeric: tabular-nums;
+  min-width: 104px;
+  text-align: center;
 }
 
 /* 图标按钮（暗色切换）：低调描边款，与导航胶囊同族 */
@@ -506,6 +523,9 @@ body.dark .site-footer {
   .content,
   .sidebar { width: 100%; flex: none; }
   .search-form .field { min-width: 200px; }
+  /* 回到顶部按钮是 fixed 的，窄屏下正好压在页脚最后一行字上，
+     给页脚多留一截空白把文字顶上去，两者就不打架了 */
+  .site-footer { padding-bottom: 76px; }
 }
 
 /* 更窄时才允许顶栏折行，避免一窄就「塌成两行」 */
